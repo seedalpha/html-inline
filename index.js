@@ -1,7 +1,9 @@
 var trumpet = require('trumpet');
 var through = require('through2');
-var fs = require('fs');
-var path = require('path');
+var fs      = require('fs');
+var path    = require('path');
+var url     = require('url');
+var request = require('request');
 
 module.exports = function (opts) {
     if (!opts) opts = {};
@@ -12,9 +14,7 @@ module.exports = function (opts) {
         tr.selectAll('script[src]', function (node) {
             var file = fix(node.getAttribute('src'));
             node.removeAttribute('src');
-            fs.createReadStream(file)
-                .pipe(node.createWriteStream())
-            ;
+            getStream(file).pipe(node.createWriteStream());
         });
     }
 
@@ -30,7 +30,7 @@ module.exports = function (opts) {
             });
             var ext = path.extname(file).replace(/^\./, '');;
             w.write(' src="data:image/' + ext + ';base64,');
-            fs.createReadStream(file).pipe(through(write, end));
+            getStream(file).pipe(through(write, end));
             
             var bytes = 0, last = null;
             
@@ -64,10 +64,9 @@ module.exports = function (opts) {
             var rel = node.getAttribute('rel').toLowerCase();
             if (rel !== 'stylesheet') return;
             var file = fix(node.getAttribute('href'));
-
             var w = node.createWriteStream({ outer: true });
             w.write('<style>');
-            var r = fs.createReadStream(file);
+            var r = getStream(file);
             r.pipe(w, { end: false });
             r.on('end', function () { w.end('</style>') });
         });
@@ -76,12 +75,26 @@ module.exports = function (opts) {
     return tr;
 
     function fix (p) {
+      if (isURL(basedir)) {
+        return url.resolve(basedir, p);
+      } else {
         return path.resolve(basedir, path.relative('/', path.resolve('/', p)));
+      }
     }
     function enc (s) {
         return s.replace(/"/g, '&#34;')
             .replace(/>/g, '&gt;')
             .replace(/</g, '&lt;')
         ;
+    }
+    function getStream(p) {
+        if (isURL(basedir)) {
+            return request(p);
+        } else {
+            return fs.createReadStream(p);
+        }
+    }
+    function isURL(p) {
+        return p.indexOf('http') === 0;
     }
 };

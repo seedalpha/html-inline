@@ -52,7 +52,7 @@ html-inline {-i INFILE -o OUTFILE -b BASEDIR}
 
   -i File to read. Default: STDIN.
   -o File to write. Default: STDOUT.
-  -b Directory to resolve paths from. Default: $PWD.
+  -b Directory or Url to resolve paths from. Default: $PWD.
 
   --ignore-images Don't inline images. Default: false
   --ignore-scripts Don't inline JavaScript. Default: false

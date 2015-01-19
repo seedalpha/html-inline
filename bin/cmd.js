@@ -4,6 +4,7 @@ var inliner = require('../');
 var fs = require('fs');
 var path = require('path');
 var minimist = require('minimist');
+var request = require('request');
 
 var argv = minimist(process.argv.slice(2), {
     alias: { i: 'infile', o: 'outfile', b: 'basedir', h: 'help',
@@ -16,13 +17,19 @@ var argv = minimist(process.argv.slice(2), {
 if (argv.help) return usage(0);
 
 var infile = argv.infile || argv._[0];
+
+if (isURL(infile) && !argv.basedir) {
+    argv.basedir = infile;
+}
+
 if (!argv.basedir && infile) {
     argv.basedir = path.resolve(path.dirname(infile));
 }
+
 var inline = inliner(argv);
 var input = infile === '-' || !infile
     ? process.stdin
-    : fs.createReadStream(infile)
+    : getStream(infile) 
 ;
 var output = argv.outfile === '-'
     ? process.stdout
@@ -36,4 +43,16 @@ function usage (code) {
     r.on('end', function () {
         if (code) process.exit(code);
     });
+}
+
+function isURL(p) {
+    return p.indexOf('http') === 0;
+}
+
+function getStream(file) {
+    if (isURL(file)) {
+        return request(infile);
+    } else {
+        return fs.createReadStream(infile);
+    }
 }
